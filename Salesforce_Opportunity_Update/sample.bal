@@ -1,8 +1,7 @@
-import ballerina/http;
-import ballerina/log;
 import ballerinax/salesforce as sfdc;
-import ballerinax/slack;
 import ballerinax/trigger.salesforce as sfdcListener;
+import ballerina/io;
+import ballerina/http;
 
 // Salesforce client configuration parameters
 type OAuth2RefreshTokenGrantConfig record {
@@ -26,8 +25,8 @@ configurable OAuth2RefreshTokenGrantConfig salesforceOAuthConfig = ?;
 configurable string salesforceBaseUrl = ?;
 
 // Slack configuration parameters
-configurable string slackToken = ?;
-configurable string slackChannelName = ?;
+// configurable string slackToken = ?;
+// configurable string slackChannelName = ?;
 
 listener sfdcListener:Listener sfdcEventListener = new ({
     username: salesforceListenerConfig.username,
@@ -35,9 +34,15 @@ listener sfdcListener:Listener sfdcEventListener = new ({
     channelName: CHANNEL_NAME
 });
 
-@display { label: "Salesforce Opportunity Update to Slack Channel Message" }
-service  sfdcListener:RecordService on sfdcEventListener {
+type OpportunityDetails record {
+    string Name;
+    string LastModifiedDate;
+};
+
+@display {label: "Salesforce Opportunity Update to Slack Channel Message"}
+service sfdcListener:RecordService on sfdcEventListener {
     remote function onUpdate(sfdcListener:EventData payload) returns error? {
+        io:print("onUpdate");
         string opportunityId = payload?.metadata?.recordId ?: "";
         string stageName = check payload.changedData.StageName;
         sfdc:Client sfdcClient = check new ({
@@ -49,18 +54,17 @@ service  sfdcListener:RecordService on sfdcEventListener {
                 refreshUrl: salesforceOAuthConfig.refreshUrl
             }
         });
-        json opportunityRecord = check sfdcClient->getOpportunityById(opportunityId.toString());
-        // Create the message
-        string opportunityName = check opportunityRecord.Name;
-        string message = string `Opportunity Updated | Opportunity Name : ${opportunityName} | Opportunity Status: ${
+        OpportunityDetails opportunityRecord = check sfdcClient->getById("Opportunity", opportunityId.toString(), ["Name", "LastModifiedDate"], OpportunityDetails);
+
+        string message = string `Opportunity Updated | Opportunity Name : ${opportunityRecord.Name} | Opportunity Status: ${
             stageName} | Link: < ${salesforceBaseUrl}/${opportunityId} >`;
 
-        slack:Client slackClient = check new ({auth: {token: slackToken}});
-        _ = check slackClient->postMessage({
-            channelName: slackChannelName,
-            text: message
-        });
-        log:printInfo(string `Message posted in Slack channel ${slackChannelName} successfully!`);
+        // slack:Client slackClient = check new ({auth: {token: slackToken}});
+        // _ = check slackClient->postMessage({
+        //     channelName: slackChannelName,
+        //     text: message
+        // });
+        io:print(message);
     }
 
     remote function onCreate(sfdcListener:EventData payload) returns error? {
@@ -76,4 +80,5 @@ service  sfdcListener:RecordService on sfdcEventListener {
     }
 }
 
-service /ignore on new http:Listener(8090) {}
+service /ignore on new http:Listener(8090) {
+}

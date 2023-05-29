@@ -1,0 +1,8 @@
+[package]
+org = "dilhashanazeer"
+name = "Salesforce_Opportunity_Update"
+version = "0.1.0"
+distribution = "2201.5.0"
+
+[build-options]
+observabilityIncluded = true
