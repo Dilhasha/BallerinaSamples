@@ -1,0 +1,12 @@
+[build-options]
+  observabilityIncluded = true
+
+[package]
+  distribution = "2201.3.1"
+  export = ["sfdc_new_contact_to_netsuite_contact"]
+  icon = "docs/icon.png"
+  keywords = ["Kind/Sample","Type/Webhook","Category/Integration"]
+  name = "sfdc_new_contact_to_netsuite_contact"
+  org = "fathima"
+  version = "3.1.0"
+
