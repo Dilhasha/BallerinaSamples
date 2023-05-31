@@ -1,0 +1,12 @@
+[build-options]
+  observabilityIncluded = true
+
+[package]
+  distribution = "2201.3.1"
+  export = ["sfdc_lead_to_gsheet_row"]
+  icon = "docs/icon.png"
+  keywords = ["Kind/Sample","Type/Webhook","Category/Integration"]
+  name = "sfdc_lead_to_gsheet_row"
+  org = "fathima"
+  version = "3.1.0"
+
