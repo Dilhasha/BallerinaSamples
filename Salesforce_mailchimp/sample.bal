@@ -36,12 +36,19 @@ listener sfdcListener:Listener webhookListener = new ({
     channelName: CHANNEL_NAME
 });
 
-@display { label: "Salesforce New Lead to Mailchimp Subscribers List" }
+type LeadDetails record {
+    string FirstName;
+    string LastName;
+    string Phone;
+    string Email;
+};
+
+@display {label: "Salesforce New Lead to Mailchimp Subscribers List"}
 service sfdcListener:RecordService on webhookListener {
 
     remote function onCreate(sfdcListener:EventData payload) returns error? {
         string sfLeadId = check payload?.metadata?.recordId.ensureType();
-        salesforce:Client salesforceEndpoint = check new ({
+        salesforce:Client salesforceClientEndpoint = check new ({
             baseUrl: salesforceBaseUrl,
             auth: {
                 refreshUrl: salesforceOAuthConfig.refreshUrl,
@@ -50,24 +57,15 @@ service sfdcListener:RecordService on webhookListener {
                 clientSecret: salesforceOAuthConfig.clientSecret
             }
         });
+        LeadDetails leadRecord = check salesforceClientEndpoint->getById("Lead", sfLeadId.toString(), ["FirstName", "LastName", "Phone", "Email"], LeadDetails);
 
-        json|salesforce:Error leadRecord = salesforceEndpoint->getLeadById(sfLeadId);
-
-        if leadRecord is salesforce:Error {
-            log:printError("Error occured while getting new lead record.", leadRecord);
-            return;
-        }
-        string? leadFirstName = check leadRecord?.FirstName;
-        string? leadLastName = check leadRecord?.LastName;
-        string? leadPhone = check leadRecord?.Phone;
-        string? leadEmail = check leadRecord?.Email;
         mailchimp:AddListMembers1 contact = {
-            email_address: leadEmail?: "",
+            email_address: leadRecord.Email,
             status: "subscribed",
             merge_fields: {
-                "FNAME": leadFirstName?: "",
-                "LNAME": leadLastName?: "",
-                "PHONE": leadPhone?: ""
+                "FNAME": leadRecord.FirstName,
+                "LNAME": leadRecord.LastName,
+                "PHONE": leadRecord.Phone
             }
         };
 
@@ -81,7 +79,7 @@ service sfdcListener:RecordService on webhookListener {
         string? audienceId = ();
         mailchimp:SubscriberLists|error audiences = mailchimpEndpoint->getLists();
         if audiences is error {
-            log:printError("Error occured while getting audiences list (subscribers).", audiences);
+            log:printError("Error occured while getting audiences list.", audiences);
             return;
         }
 
@@ -93,17 +91,17 @@ service sfdcListener:RecordService on webhookListener {
         }
 
         if audienceId is () {
-            log:printError("Given audience name is not in the list. Provide a valid audience name to add contact.");
+            log:printError("Given audience name is not in the list. Provide a valid audience name to add lead.");
             return;
         }
-        
+
         mailchimp:ListMembers2|error contactList = mailchimpEndpoint->postListsIdMembers(audienceId, contact);
         if contactList is error {
-            log:printError("Error occured while adding contact to Mailchimp subscribers list.", contactList);
+            log:printError("Error occured while adding salesforce lead to Mailchimp subscribers list.", contactList);
             return;
         }
-        log:printInfo(string`'${contactList.email_address?:""}' is added into Mailchimp subscribers list.`);
-          
+        log:printInfo(string `'${contactList.email_address ?: ""}' is added into Mailchimp subscribers list.`);
+
     }
     remote function onUpdate(sfdcListener:EventData payload) returns error? {
         //Not Implemented
