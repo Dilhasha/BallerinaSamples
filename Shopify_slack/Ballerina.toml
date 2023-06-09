@@ -1,0 +1,12 @@
+[build-options]
+  observabilityIncluded = true
+
+[package]
+  distribution = "2201.3.1"
+  export = ["shopify_customers_to_mailchimp_subscribers"]
+  icon = "docs/icon.png"
+  keywords = ["Kind/Sample","Type/ManualTrigger","Category/Integration"]
+  name = "shopify_customers_to_mailchimp_subscribers"
+  org = "fathima"
+  version = "3.1.0"
+
